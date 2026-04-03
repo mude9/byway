@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Byway Tool + Google Maps</title>
+  <style>
+    :root{
+      --bg:#f5f7fb;--card:#ffffff;--text:#18212f;--muted:#667085;--line:#e6eaf2;
+      --primary:#1d4ed8;--primary-2:#2563eb;--green:#0f9d58;--warn:#b26b00;
+      --shadow:0 10px 30px rgba(16,24,40,.08);--radius:18px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,"Segoe UI",Tahoma,sans-serif;background:linear-gradient(180deg,#f7f9fc 0%, #eef3fb 100%);color:var(--text);}
+    .wrap{max-width:1240px;margin:0 auto;padding:20px;}
+    .hero{background:linear-gradient(135deg,#0f172a 0%, #1e3a8a 100%);color:#fff;border-radius:26px;padding:24px;box-shadow:var(--shadow);margin-bottom:18px;}
+    .hero h1{margin:0 0 8px;font-size:30px}
+    .hero p{margin:0;color:#dbe5ff;line-height:1.8}
+    .grid{display:grid;grid-template-columns:1.08fr 1fr;gap:18px;}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;}
+    .section-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;}
+    .section-title h2{margin:0;font-size:21px;}
+    .small{font-size:13px;color:var(--muted);line-height:1.8}
+    .fields{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+    .field{display:flex;flex-direction:column;gap:7px}
+    .field.full{grid-column:1 / -1}
+    label{font-size:14px;font-weight:700;}
+    input, select, textarea, button{font-family:inherit;}
+    input, select, textarea{width:100%;border:1px solid #d9e2f1;border-radius:14px;padding:13px 14px;font-size:15px;background:#fff;outline:none;transition:.18s ease;}
+    input:focus, select:focus, textarea:focus{border-color:#7aa2ff;box-shadow:0 0 0 4px rgba(37,99,235,.10);}
+    textarea.output{min-height:480px;resize:vertical;line-height:2;background:#fcfdff;}
+    .row{display:flex;gap:10px;flex-wrap:wrap;}
+    .btn{border:none;border-radius:14px;padding:12px 16px;cursor:pointer;font-weight:700;font-size:14px;transition:.18s ease;}
+    .btn:hover{transform:translateY(-1px)}
+    .btn.primary{background:linear-gradient(135deg,var(--primary),var(--primary-2));color:#fff;}
+    .btn.light{background:#edf3ff;color:#1745b5;}
+    .btn.green{background:#e9f9ef;color:#0f7c45;}
+    .btn.gray{background:#f1f5f9;color:#1f2937;}
+    .btn.warn{background:#fff5e7;color:#9a6200;}
+    .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:14px;}
+    .stat{background:#f8fbff;border:1px solid #e4edff;border-radius:16px;padding:14px;}
+    .stat .k{font-size:13px;color:var(--muted);margin-bottom:8px}
+    .stat .v{font-size:19px;font-weight:800}
+    .alert{margin-top:10px;padding:12px 14px;border-radius:14px;background:#fff7e6;border:1px solid #fde7b2;color:#8a5a00;font-size:13px;line-height:1.8;}
+    .good{background:#ebfff2;border-color:#bbefcb;color:#0d6d3f;}
+    .bad{background:#fff1f2;border-color:#fecdd3;color:#be123c;}
+    .inline-check{display:flex;align-items:center;gap:10px;background:#f8fbff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;}
+    .inline-check input{width:auto;margin:0;transform:scale(1.15);}
+    .history-list{display:flex;flex-direction:column;gap:10px;max-height:300px;overflow:auto;padding-right:2px;}
+    .history-item{border:1px solid var(--line);border-radius:16px;padding:12px;background:#fbfcff;}
+    .history-top{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;}
+    .history-route{font-weight:800;}
+    .tiny-actions{display:flex;gap:8px;flex-wrap:wrap;}
+    .tiny-btn{border:none;background:#eef4ff;color:#1d4ed8;padding:8px 10px;border-radius:10px;cursor:pointer;font-size:12px;font-weight:700;}
+    .places{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+    .pill{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;background:#f4f7fb;border:1px solid var(--line);border-radius:999px;font-size:13px;color:#334155;margin:4px 6px 0 0;cursor:pointer;}
+    .footer-note{margin-top:12px;font-size:12px;color:var(--muted);line-height:1.8;}
+    .statusbar{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+    .badge{padding:8px 12px;border-radius:999px;font-size:12px;font-weight:700;background:#eef4ff;color:#1745b5;border:1px solid #dbe7ff;}
+    @media (max-width: 900px){
+      .grid{grid-template-columns:1fr}
+      .fields{grid-template-columns:1fr}
+      .hero h1{font-size:24px}
+      textarea.output{min-height:320px}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <h1>Byway Tool + Google Maps</h1>
+      <p>تكتب من وإلى، ولو عندك إنترنت و Google Maps API Key الأداة تحاول تجيب المسافة الحقيقية من Google Maps. ولو مفيش إنترنت أو الـ API مش شغال، تقدر تدخل المسافة يدويًا فورًا.</p>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="section-title">
+          <h2>الإعدادات وبيانات الرحلة</h2>
+          <div class="small">المفتاح والبيانات بيتحفظوا محليًا على نفس الجهاز</div>
+        </div>
+
+        <div class="fields">
+          <div class="field full">
+            <label for="googleApiKey">Google Maps API Key (اختياري)</label>
+            <input id="googleApiKey" placeholder="الصق الـ API Key هنا لو هتستخدم Google Maps" />
+            <div class="small">المطلوب عادة: Maps JavaScript API + تفعيل Billing. الأفضل تستخدمه على localhost أو موقع مستضاف، وليس للإنتاج بدون تقييد المفتاح.</div>
+          </div>
+
+          <div class="field">
+            <label for="fromCity">من</label>
+            <input id="fromCity" list="placesList" placeholder="مثال: المنزلة" />
+          </div>
+
+          <div class="field">
+            <label for="toCity">إلى</label>
+            <input id="toCity" list="placesList" placeholder="مثال: مدينة نصر" />
+          </div>
+
+          <div class="field">
+            <label for="messageTone">نوع الرسالة</label>
+            <select id="messageTone">
+              <option value="balanced">متوازن</option>
+              <option value="soft">هادئ</option>
+              <option value="strong">إقناعي قوي</option>
+              <option value="short">مختصر جدًا</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="purpose">نوع الخط / الملاحظة</label>
+            <select id="purpose">
+              <option value="general">خط عام</option>
+              <option value="daily_work">شغل يومي</option>
+              <option value="university">جامعة / دراسة</option>
+              <option value="weekend">ويك إند / سفر متكرر</option>
+              <option value="high_demand">خط عليه طلب</option>
+            </select>
+          </div>
+
+          <div class="field full">
+            <div class="inline-check">
+              <input id="distanceConfirmed" type="checkbox" />
+              <label for="distanceConfirmed" style="margin:0;font-weight:700;cursor:pointer;">تم التأكد من المسافة بالفعل</label>
+            </div>
+          </div>
+
+          <div class="field full">
+            <label for="distanceOverride">المسافة اليدوية عند عدم وجود إنترنت أو لو عايز تعدّلها (اختياري)</label>
+            <input id="distanceOverride" placeholder="مثال: 160-180 أو 75-85" />
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:16px;">
+          <button class="btn warn" id="fetchDistanceBtn">جلب المسافة من Google Maps</button>
+          <button class="btn primary" id="generateBtn">توليد الرسالة</button>
+          <button class="btn green" id="copyBtn">نسخ الرسالة</button>
+          <button class="btn light" id="saveBtn">حفظ الخط والرسالة</button>
+          <button class="btn gray" id="clearBtn">مسح الخانات</button>
+        </div>
+
+        <div class="statusbar">
+          <div class="badge" id="internetBadge">الإنترنت: —</div>
+          <div class="badge" id="mapsBadge">Google Maps: —</div>
+          <div class="badge" id="distanceModeBadge">وضع المسافة: —</div>
+        </div>
+
+        <div class="stats">
+          <div class="stat">
+            <div class="k">المسافة</div>
+            <div class="v" id="distanceBox">—</div>
+          </div>
+          <div class="stat">
+            <div class="k">تكلفة المشوار</div>
+            <div class="v" id="tripCostBox">—</div>
+          </div>
+          <div class="stat">
+            <div class="k">راكب واحد</div>
+            <div class="v" id="onePassengerBox">—</div>
+          </div>
+          <div class="stat">
+            <div class="k">2 ركاب / 3 ركاب</div>
+            <div class="v" id="multiPassengerBox">—</div>
+          </div>
+        </div>
+
+        <div id="routeAlert" class="alert" style="display:none;"></div>
+
+        <div class="field full" style="margin-top:14px;">
+          <label>أماكن محفوظة سريعة</label>
+          <div class="places" id="quickPlaces"></div>
+        </div>
+
+        <div class="footer-note">
+          الملاحظات المهمة:
+          <br>1) الأداة تستخدم Google Maps JavaScript API لو المفتاح متوفر والإنترنت شغال.
+          <br>2) لو Google Maps ما اشتغلش، الأداة ترجع تلقائيًا للمسافة اليدوية أو التقدير الداخلي.
+          <br>3) فتح الملف كـ HTML عادي مناسب للتجربة، لكن للاستقرار الأفضل استخدمه على localhost أو صفحة مستضافة.
+        </div>
+
+        <datalist id="placesList"></datalist>
+      </div>
+
+      <div class="card">
+        <div class="section-title">
+          <h2>الرسالة الجاهزة</h2>
+          <div class="small">تقدر تنسخها وتبعتها فورًا</div>
+        </div>
+
+        <textarea class="output" id="output" readonly placeholder="الرسالة هتظهر هنا بعد ما تضغط توليد الرسالة"></textarea>
+
+        <div class="section-title" style="margin-top:18px;">
+          <h2 style="font-size:18px;">الخطوط والرسائل المحفوظة</h2>
+          <div class="small">آخر الخطوط اللي اتعملت على الجهاز ده</div>
+        </div>
+        <div class="history-list" id="historyList"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const PLACE_COORDS = {
+  "القاهرة":[30.0444,31.2357],"الجيزة":[30.0131,31.2089],"مدينة نصر":[30.0617,31.3300],
+  "التجمع الخامس":[30.0284,31.4913],"المرج القديمة":[30.1631,31.3380],"صلاح سالم":[30.0725,31.2787],
+  "الشروق":[30.1262,31.6306],"العاصمة الادارية":[30.0135,31.7306],"العاصمة الإدارية":[30.0135,31.7306],
+  "العاشر من رمضان":[30.3037,31.7450],"بدر":[30.1419,31.7637],"السلام":[30.1386,31.3349],
+  "شبرا مصر":[30.0786,31.2457],"حلوان":[29.8414,31.3009],"القاهرة الجديدة":[30.0293,31.4919],
+  "الإسكندرية":[31.2001,29.9187],"اسكندرية":[31.2001,29.9187],"الإسكندريه":[31.2001,29.9187],"اسكندريه":[31.2001,29.9187],
+  "وادي القمر":[31.1580,29.8030],"أبو قير":[31.3191,30.0636],"ابو قير":[31.3191,30.0636],
+  "الأكاديمية العربية ابوقير":[31.2872,30.0716],"الأكاديمية العربية أبو قير":[31.2872,30.0716],
+  "طنطا":[30.7865,31.0004],"المنصورة":[31.0409,31.3785],"دمياط":[31.4165,31.8133],
+  "دمياط الجديدة":[31.4626,31.6764],"دمياط الجديده":[31.4626,31.6764],"بورسعيد":[31.2653,32.3019],
+  "المنزلة":[31.1582,31.9368],"الفيوم":[29.3084,30.8428],"المنيا":[28.1099,30.7503],
+  "مطروح":[31.3543,27.2373],"مرسى مطروح":[31.3543,27.2373],"الضبعة":[31.0406,28.4353],
+  "دسوق":[31.1320,30.6478],"المحمودية":[31.1814,30.1437],"البحيرة":[30.8481,30.3436],
+  "الإسماعيلية":[30.5965,32.2715],"الاسماعيلية":[30.5965,32.2715],"العبور":[30.2281,31.4594],
+  "جمصة":[31.4383,31.5636],"المنطقة الصناعية بجمصة":[31.4440,31.5570],"جامعة حورس":[31.4603,31.6786]
+};
+
+const KNOWN_ROUTES = {
+  "وادي القمر|الأكاديمية العربية أبو قير":[30,35],"وادي القمر|الأكاديمية العربية ابوقير":[30,35],
+  "المنزلة|مدينة نصر":[160,180],"شبرا مصر|العاصمة الادارية":[65,75],"شبرا مصر|العاصمة الإدارية":[65,75],
+  "العاشر من رمضان|الشروق":[45,55],"القاهرة|الإسكندرية":[220,235],"القاهرة|اسكندرية":[220,235],
+  "الفيوم|القاهرة":[95,110],"العاشر من رمضان|بدر":[25,35],"السلام|العاصمة الادارية":[50,60],
+  "السلام|العاصمة الإدارية":[50,60],"المنصورة|القاهرة":[120,135],"دمياط الجديدة|المنصورة":[70,75],
+  "دمياط الجديده|المنصورة":[70,75],"الإسكندرية|طنطا":[125,140],"اسكندرية|طنطا":[125,140],
+  "الإسماعيلية|العبور":[95,105],"الاسماعيلية|العبور":[95,105],"الشروق|صلاح سالم":[35,45],
+  "المرج القديمة|التجمع الخامس":[30,40],"العاشر من رمضان|صلاح سالم":[50,60],"دمياط|بورسعيد":[65,80],
+  "الجيزة|مطروح":[430,470],"اسكندرية|الضبعة":[160,180],"الإسكندرية|الضبعة":[160,180],
+  "دسوق|مرسى مطروح":[330,380],"القاهرة|المنيا":[240,270]
+};
+
+const STORAGE_KEYS = {
+  history:"byway_history_v4",
+  places:"byway_places_v4",
+  apiKey:"byway_google_api_key_v1"
+};
+
+const APP_STATE = {
+  mapsLoaded:false,
+  googleReady:false,
+  lastDistanceRange:null,
+  distanceMode:"—"
+};
+
+function byId(id){ return document.getElementById(id); }
+
+function normalizeArabic(str){
+  return (str || "").trim().replace(/\s+/g," ").replace(/[أإآ]/g,"ا").replace(/ة/g,"ه");
+}
+function parseRange(text){
+  const cleaned = (text || "").trim().replace(/[–—]/g,"-");
+  if(!cleaned) return null;
+  if(cleaned.includes("-")){
+    const parts = cleaned.split("-").map(x => Number(x.trim()));
+    if(parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) return [Math.min(parts[0],parts[1]), Math.max(parts[0],parts[1])];
+  }
+  const n = Number(cleaned);
+  if(!isNaN(n)) return [n,n];
+  return null;
+}
+function formatRange(min,max){
+  min = Math.round(min); max = Math.round(max);
+  return min === max ? String(min) : `${min}–${max}`;
+}
+function haversineKm(a,b){
+  const [lat1,lon1] = a, [lat2,lon2] = b, R = 6371;
+  const toRad = x => x * Math.PI / 180;
+  const dLat = toRad(lat2-lat1), dLon = toRad(lon2-lon1);
+  const z = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(z));
+}
+function estimateRoadRange(from,to){
+  const nf = normalizeArabic(from), nt = normalizeArabic(to);
+  for(const key in KNOWN_ROUTES){
+    const pair = key.split("|");
+    if(normalizeArabic(pair[0]) === nf && normalizeArabic(pair[1]) === nt) return KNOWN_ROUTES[key];
+  }
+  let fromCoord = null, toCoord = null;
+  for(const name in PLACE_COORDS){
+    if(normalizeArabic(name) === nf) fromCoord = PLACE_COORDS[name];
+    if(normalizeArabic(name) === nt) toCoord = PLACE_COORDS[name];
+  }
+  if(!fromCoord || !toCoord) return null;
+  const direct = haversineKm(fromCoord,toCoord);
+  let factorMin = 1.18, factorMax = 1.38;
+  if(direct > 140){ factorMin = 1.12; factorMax = 1.28; }
+  if(direct < 25){ factorMin = 1.20; factorMax = 1.45; }
+  const min = Math.max(5, direct * factorMin);
+  const max = Math.max(min + 5, direct * factorMax);
+  return [Math.round(min/5)*5, Math.round(max/5)*5];
+}
+function tripCostFromDistance(range){ return [range[0]*2.05, range[1]*2.25]; }
+function passengerOneFromDistance(range){ return [range[0]*1.75, range[1]*1.95]; }
+function multiplyRange(range,n){ return [range[0]*n, range[1]*n]; }
+
+function updateBadges(){
+  byId("internetBadge").textContent = `الإنترنت: ${navigator.onLine ? "شغال" : "غير متوفر"}`;
+  byId("mapsBadge").textContent = `Google Maps: ${APP_STATE.googleReady ? "جاهز" : "غير جاهز"}`;
+  byId("distanceModeBadge").textContent = `وضع المسافة: ${APP_STATE.distanceMode}`;
+}
+window.addEventListener("online", updateBadges);
+window.addEventListener("offline", updateBadges);
+
+function getHistory(){ try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.history) || "[]"); } catch(e){ return []; } }
+function setHistory(arr){ localStorage.setItem(STORAGE_KEYS.history, JSON.stringify(arr.slice(0,40))); }
+function getPlaces(){ try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.places) || "[]"); } catch(e){ return []; } }
+function setPlaces(arr){ localStorage.setItem(STORAGE_KEYS.places, JSON.stringify(arr.slice(0,120))); }
+
+function saveApiKey(){
+  localStorage.setItem(STORAGE_KEYS.apiKey, byId("googleApiKey").value.trim());
+}
+function loadApiKey(){
+  byId("googleApiKey").value = localStorage.getItem(STORAGE_KEYS.apiKey) || "";
+}
+
+function savePlaceIfNeeded(name){
+  const v = (name || "").trim();
+  if(!v) return;
+  const places = getPlaces();
+  const exists = places.some(p => normalizeArabic(p) === normalizeArabic(v));
+  if(!exists){ places.unshift(v); setPlaces(places); }
+  renderPlaces();
+}
+function fillPlacesDataList(){
+  const list = byId("placesList");
+  const all = [...new Set([...Object.keys(PLACE_COORDS), ...getPlaces()])];
+  list.innerHTML = all.map(p => `<option value="${p}"></option>`).join("");
+}
+function renderQuickPlaces(){
+  const holder = byId("quickPlaces");
+  const places = getPlaces().slice(0,18);
+  if(!places.length){ holder.innerHTML = '<div class="small">لسه مفيش أماكن محفوظة.</div>'; return; }
+  holder.innerHTML = places.map(p => `<button class="pill" onclick="insertPlace('${String(p).replace(/'/g,"\\'")}')">${p}</button>`).join("");
+}
+function renderPlaces(){ fillPlacesDataList(); renderQuickPlaces(); }
+function insertPlace(name){
+  const from = byId("fromCity"), to = byId("toCity");
+  if(!from.value) from.value = name;
+  else if(!to.value) to.value = name;
+  else from.value = name;
+}
+
+function toneTemplates(tone){
+  const map = {
+    balanced:{intro:"أهلًا بحضرتك 👌",ask:"لو وفرنالك ركاب على نفس طريقك…\nمستعد تاخدهم معاك؟ 👍"},
+    soft:{intro:"أهلًا بحضرتك، خليني أوضح الفكرة ببساطة 👌",ask:"لو حابب نجربها على أقرب رحلة ليك…\nيناسبك تبدأ معانا؟ 👍"},
+    strong:{intro:"خليني أقولها لحضرتك بشكل واضح جدًا 👌",ask:"لو وفرنالك ركاب مناسبين في نفس خطك…\nجاهز تبدأ بأقرب رحلة؟ 🔥"},
+    short:{intro:"أهلًا بحضرتك 👌",ask:"لو وفرنالك ركاب على نفس الطريق، مستعد تاخدهم معاك؟ 👍"}
+  };
+  return map[tone] || map.balanced;
+}
+function purposeLine(purpose){
+  const map = {
+    general:"",
+    daily_work:"وده غالبًا خط شغل متكرر، فالتوفير فيه بيفرق جدًا مع الوقت.",
+    university:"وده خط دراسة / جامعة، وغالبًا بيبقى مناسب جدًا لتجميع ركاب على نفس الاتجاه.",
+    weekend:"وده نوع من الخطوط اللي بيبقى عليه سفر متكرر خصوصًا في الويك إند.",
+    high_demand:"والخط ده غالبًا عليه طلب، ففرصة تلاقي ركاب مناسبة بتكون أعلى."
+  };
+  return map[purpose] || "";
+}
+function buildMessage(data){
+  const t = toneTemplates(data.tone);
+  const distanceWord = data.confirmed ? "المؤكدة" : "التقريبية";
+  const sourceLine = data.distanceSource
+    ? `\nتم اعتماد المسافة بناءً على ${data.distanceSource}.`
+    : "";
+  const extra = purposeLine(data.purpose);
+  const twoPassengers = multiplyRange(data.onePassenger,2);
+  const threePassengers = multiplyRange(data.onePassenger,3);
+
+  if(data.tone === "short"){
+    return `${t.intro}
+بتسافر من ${data.fromCity} لـ ${data.toCity}؟
+
+المسافة ${distanceWord} حوالي ${formatRange(...data.distanceKm)} كم
+والمشوار ده بيكلفك تقريبًا ${formatRange(...data.tripCost)} جنيه 🚗
+
+مع Byway:
+👤 راكب واحد: ${formatRange(...data.onePassenger)} جنيه
+👥 2 ركاب: ${formatRange(...twoPassengers)} جنيه
+👥 3 ركاب: ${formatRange(...threePassengers)} جنيه
+
+يعني بدل ما تدفع المشوار كله من جيبك، ممكن تغطي التكلفة أو تطلع موفر بشكل واضح 👌${sourceLine}
+
+${t.ask}`;
+  }
+
+  return `${t.intro}
+بتسافر من ${data.fromCity} لـ ${data.toCity}؟
+
+المسافة ${distanceWord} حوالي ${formatRange(...data.distanceKm)} كم
+
+المشوار ده بيكلفك حوالي ${formatRange(...data.tripCost)} جنيه 🚗
+
+مع Byway:
+👤 راكب واحد بيدفع حوالي ${formatRange(...data.onePassenger)} جنيه
+👉 يعني بيغطي جزء كبير أو أغلب تكلفة مشوارك
+
+👥 ولو معاك 2–3 ركاب:
+👉 2 ركاب = حوالي ${formatRange(...twoPassengers)} جنيه
+👉 3 ركاب = حوالي ${formatRange(...threePassengers)} جنيه
+يعني مش بس بتغطي التكلفة… ده ممكن تبقى موفر جدًا أو كسبان كمان 💰
+
+الفكرة إنك كده كده رايح نفس الطريق…
+فليه تدفع تكلفة المشوار كلها من جيبك لوحدك؟
+
+${extra ? extra + "\n" : ""}${sourceLine}
+
+${t.ask}`;
+}
+
+function setAlert(type, text){
+  const box = byId("routeAlert");
+  box.style.display = "block";
+  box.className = "alert" + (type === "good" ? " good" : type === "bad" ? " bad" : "");
+  box.innerHTML = text;
+}
+
+function loadGoogleMaps(apiKey){
+  return new Promise((resolve, reject) => {
+    if(APP_STATE.googleReady && window.google && google.maps){
+      resolve();
+      return;
+    }
+    if(!apiKey){
+      reject(new Error("لا يوجد API Key"));
+      return;
+    }
+
+    const old = document.getElementById("google-maps-script");
+    if(old) old.remove();
+
+    window.__gmapsInit = function(){
+      APP_STATE.mapsLoaded = true;
+      APP_STATE.googleReady = true;
+      updateBadges();
+      resolve();
+    };
+
+    const script = document.createElement("script");
+    script.id = "google-maps-script";
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=routes&callback=__gmapsInit`;
+    script.async = true;
+    script.defer = true;
+    script.onerror = function(){
+      APP_STATE.googleReady = false;
+      updateBadges();
+      reject(new Error("فشل تحميل Google Maps"));
+    };
+    document.head.appendChild(script);
+  });
+}
+
+async function getDistanceFromGoogleMaps(){
+  const apiKey = byId("googleApiKey").value.trim();
+  const fromCity = byId("fromCity").value.trim();
+  const toCity = byId("toCity").value.trim();
+
+  if(!fromCity || !toCity){
+    alert("اكتب من وإلى الأول.");
+    return null;
+  }
+  if(!navigator.onLine){
+    setAlert("bad", "لا يوجد إنترنت حاليًا، استخدم المسافة اليدوية.");
+    APP_STATE.distanceMode = "يدوي / بدون إنترنت";
+    updateBadges();
+    return null;
+  }
+  if(!apiKey){
+    setAlert("bad", "أضف Google Maps API Key الأول، أو استخدم المسافة اليدوية.");
+    APP_STATE.distanceMode = "يدوي / لا يوجد API Key";
+    updateBadges();
+    return null;
+  }
+
+  saveApiKey();
+
+  try{
+    await loadGoogleMaps(apiKey);
+
+    const directionsService = new google.maps.DirectionsService();
+    const result = await directionsService.route({
+      origin: fromCity,
+      destination: toCity,
+      travelMode: google.maps.TravelMode.DRIVING
+    });
+
+    const legs = result.routes?.[0]?.legs || [];
+    const meters = legs.reduce((sum, leg) => sum + (leg.distance?.value || 0), 0);
+    if(!meters){
+      throw new Error("لم يتم العثور على مسافة صالحة");
+    }
+
+    const km = meters / 1000;
+    const minKm = Math.max(1, Math.floor(km * 0.97));
+    const maxKm = Math.ceil(km * 1.03);
+    const range = [minKm, maxKm];
+
+    APP_STATE.lastDistanceRange = range;
+    APP_STATE.distanceMode = "Google Maps";
+    updateBadges();
+
+    byId("distanceOverride").value = `${minKm}-${maxKm}`;
+    byId("distanceConfirmed").checked = true;
+
+    setAlert("good", `تم جلب المسافة من Google Maps بنجاح. المسافة المستخدمة حاليًا: <b>${formatRange(...range)} كم</b>.`);
+
+    return range;
+  } catch(err){
+    APP_STATE.googleReady = false;
+    APP_STATE.distanceMode = "فشل Google Maps / رجع لبديل";
+    updateBadges();
+    setAlert("bad", `ماقدرتش أجيب المسافة من Google Maps. استخدم المسافة اليدوية أو جرّب تاني. سبب محتمل: المفتاح، التفعيل، أو طريقة تشغيل الملف.`);
+    return null;
+  }
+}
+
+function resolveDistance(){
+  const manual = parseRange(byId("distanceOverride").value.trim());
+  if(manual){
+    APP_STATE.distanceMode = "يدوي";
+    updateBadges();
+    return { range: manual, source: "إدخال يدوي" };
+  }
+
+  if(APP_STATE.lastDistanceRange){
+    APP_STATE.distanceMode = "Google Maps";
+    updateBadges();
+    return { range: APP_STATE.lastDistanceRange, source: "Google Maps" };
+  }
+
+  const fromCity = byId("fromCity").value.trim();
+  const toCity = byId("toCity").value.trim();
+  const estimated = estimateRoadRange(fromCity, toCity);
+  if(estimated){
+    APP_STATE.distanceMode = "تقدير داخلي";
+    updateBadges();
+    return { range: estimated, source: "تقدير داخلي" };
+  }
+  return null;
+}
+
+function generate(){
+  const fromCity = byId("fromCity").value.trim();
+  const toCity = byId("toCity").value.trim();
+  const tone = byId("messageTone").value;
+  const purpose = byId("purpose").value;
+  const confirmed = byId("distanceConfirmed").checked;
+
+  if(!fromCity || !toCity){
+    alert("اكتب من وإلى الأول.");
+    return;
+  }
+
+  const resolved = resolveDistance();
+  if(!resolved){
+    alert("ماقدرتش أحدد المسافة. إمّا تجيبها من Google Maps أو تكتبها يدويًا.");
+    return;
+  }
+
+  const distanceKm = resolved.range;
+  const tripCost = tripCostFromDistance(distanceKm);
+  const onePassenger = passengerOneFromDistance(distanceKm);
+
+  const data = {
+    fromCity, toCity, tone, purpose, confirmed,
+    distanceKm, tripCost, onePassenger,
+    distanceSource: resolved.source
+  };
+
+  const msg = buildMessage(data);
+
+  byId("output").value = msg;
+  byId("distanceBox").textContent = `${formatRange(...distanceKm)} كم`;
+  byId("tripCostBox").textContent = `${formatRange(...tripCost)} ج`;
+  byId("onePassengerBox").textContent = `${formatRange(...onePassenger)} ج`;
+  byId("multiPassengerBox").textContent = `${formatRange(...multiplyRange(onePassenger,2))} / ${formatRange(...multiplyRange(onePassenger,3))} ج`;
+
+  if(resolved.source === "Google Maps"){
+    setAlert("good", `تم استخدام مسافة من Google Maps لهذه الرسالة.`);
+  } else if(resolved.source === "إدخال يدوي"){
+    setAlert("good", `تم استخدام مسافة يدوية لهذه الرسالة.`);
+  } else {
+    setAlert("bad", `تم استخدام تقدير داخلي للمسافة. لو محتاج رقم أدق، استخدم Google Maps أو اكتبها يدويًا.`);
+  }
+
+  savePlaceIfNeeded(fromCity);
+  savePlaceIfNeeded(toCity);
+  window.__lastGenerated = {...data, message:msg, createdAt:new Date().toLocaleString("ar-EG")};
+}
+
+function copyMessage(){
+  const text = byId("output").value;
+  if(!text){ alert("ولّد الرسالة الأول."); return; }
+  navigator.clipboard.writeText(text).then(() => alert("تم نسخ الرسالة ✅")).catch(() => alert("ماقدرتش أنسخ تلقائيًا، انسخها يدويًا من الصندوق."));
+}
+function clearForm(){
+  ["fromCity","toCity","distanceOverride","output"].forEach(id => byId(id).value = "");
+  byId("messageTone").value = "balanced";
+  byId("purpose").value = "general";
+  byId("distanceConfirmed").checked = false;
+  byId("distanceBox").textContent = "—";
+  byId("tripCostBox").textContent = "—";
+  byId("onePassengerBox").textContent = "—";
+  byId("multiPassengerBox").textContent = "—";
+  byId("routeAlert").style.display = "none";
+  APP_STATE.lastDistanceRange = null;
+  APP_STATE.distanceMode = "—";
+  updateBadges();
+  window.__lastGenerated = null;
+}
+function saveCurrent(){
+  if(!window.__lastGenerated){ alert("ولّد الرسالة الأول وبعدها احفظها."); return; }
+  const history = getHistory();
+  history.unshift({...window.__lastGenerated, id:Date.now()});
+  setHistory(history);
+  renderHistory();
+  alert("تم حفظ الخط والرسالة ✅");
+}
+function renderHistory(){
+  const holder = byId("historyList");
+  const history = getHistory();
+  if(!history.length){ holder.innerHTML = '<div class="small">لسه مفيش خطوط محفوظة.</div>'; return; }
+  holder.innerHTML = history.map(item => `
+    <div class="history-item">
+      <div class="history-top">
+        <div class="history-route">${item.fromCity} ←→ ${item.toCity}</div>
+        <div class="small">${item.createdAt || ""}</div>
+      </div>
+      <div class="small">المسافة: ${formatRange(...item.distanceKm)} كم | راكب واحد: ${formatRange(...item.onePassenger)} ج | المصدر: ${item.distanceSource || "—"}</div>
+      <div class="tiny-actions" style="margin-top:10px;">
+        <button class="tiny-btn" onclick="loadHistory(${item.id})">فتح</button>
+        <button class="tiny-btn" onclick="copyHistory(${item.id})">نسخ</button>
+        <button class="tiny-btn" onclick="deleteHistory(${item.id})" style="background:#fff1f2;color:#be123c;">حذف</button>
+      </div>
+    </div>
+  `).join("");
+}
+function loadHistory(id){
+  const item = getHistory().find(x => x.id === id);
+  if(!item) return;
+  byId("fromCity").value = item.fromCity;
+  byId("toCity").value = item.toCity;
+  byId("messageTone").value = item.tone;
+  byId("purpose").value = item.purpose;
+  byId("distanceConfirmed").checked = item.confirmed;
+  byId("distanceOverride").value = formatRange(...item.distanceKm);
+  byId("output").value = item.message || "";
+  byId("distanceBox").textContent = `${formatRange(...item.distanceKm)} كم`;
+  byId("tripCostBox").textContent = `${formatRange(...item.tripCost)} ج`;
+  byId("onePassengerBox").textContent = `${formatRange(...item.onePassenger)} ج`;
+  byId("multiPassengerBox").textContent = `${formatRange(...multiplyRange(item.onePassenger,2))} / ${formatRange(...multiplyRange(item.onePassenger,3))} ج`;
+  APP_STATE.lastDistanceRange = item.distanceKm;
+  APP_STATE.distanceMode = item.distanceSource || "محفوظ";
+  updateBadges();
+  window.__lastGenerated = item;
+  setAlert("good", "تم تحميل خط محفوظ.");
+}
+function copyHistory(id){
+  const item = getHistory().find(x => x.id === id);
+  if(!item) return;
+  navigator.clipboard.writeText(item.message || "").then(() => alert("تم نسخ الرسالة المحفوظة ✅")).catch(() => alert("انسخها يدويًا بعد ما تضغط فتح."));
+}
+function deleteHistory(id){
+  setHistory(getHistory().filter(x => x.id !== id));
+  renderHistory();
+}
+
+byId("fetchDistanceBtn").addEventListener("click", getDistanceFromGoogleMaps);
+byId("generateBtn").addEventListener("click", generate);
+byId("copyBtn").addEventListener("click", copyMessage);
+byId("saveBtn").addEventListener("click", saveCurrent);
+byId("clearBtn").addEventListener("click", clearForm);
+byId("googleApiKey").addEventListener("change", saveApiKey);
+
+function init(){
+  loadApiKey();
+  renderPlaces();
+  renderHistory();
+  updateBadges();
+}
+init();
+</script>
+</body>
+</html>
